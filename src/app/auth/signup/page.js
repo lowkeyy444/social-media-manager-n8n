@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,9 +24,14 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-      <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-10">
-        <h2 className="text-3xl font-bold text-white mb-6 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#0f111a] px-4 font-orbitron">
+      <motion.div
+        className="bg-[rgba(15,17,26,0.85)] backdrop-blur-md rounded-3xl shadow-xl w-full max-w-md p-10 border border-green-600"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <h2 className="text-4xl font-bold text-green-400 mb-6 text-center tracking-wide">
           Create an Account
         </h2>
 
@@ -35,59 +41,61 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-gray-300 mb-2">Name</label>
+            <label className="block text-green-400 mb-2">Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="John Doe"
-              className="w-full p-3 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-green-200 focus:ring-2 focus:ring-green-400 outline-none transition-all"
               required
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2">Email</label>
+            <label className="block text-green-400 mb-2">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="john@example.com"
-              className="w-full p-3 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-green-200 focus:ring-2 focus:ring-green-400 outline-none transition-all"
               required
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2">Password</label>
+            <label className="block text-green-400 mb-2">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="********"
-              className="w-full p-3 rounded-lg bg-gray-700 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-green-200 focus:ring-2 focus:ring-green-400 outline-none transition-all"
               required
             />
           </div>
 
-          <button
+          <motion.button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg text-white font-semibold hover:from-blue-700 hover:to-blue-600 transition-all"
+            className="w-full py-3 bg-gradient-to-r from-green-500 to-green-400 rounded-lg text-black font-semibold hover:from-green-600 hover:to-green-500 transition-all shadow-lg"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
             Sign Up
-          </button>
+          </motion.button>
         </form>
 
-        <p className="text-gray-400 mt-6 text-center">
+        <p className="text-green-200 mt-6 text-center">
           Already have an account?{" "}
           <a
             href="/auth/signin"
-            className="text-blue-500 font-medium hover:underline"
+            className="text-green-400 font-medium hover:underline"
           >
             Sign In
           </a>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
