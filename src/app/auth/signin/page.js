@@ -1,3 +1,4 @@
+// src/app/auth/signin/page.jsx
 "use client";
 
 import { useState } from "react";
@@ -9,17 +10,41 @@ export default function SigninPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await fetch("/api/auth/signin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (res.ok) router.push("/dashboard"); // redirect after login
-    else setError(data.error);
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Invalid credentials");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ Store token & user BEFORE navigation
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // ✅ Use setTimeout to ensure state updates propagate
+      setTimeout(() => router.push("/dashboard"), 50);
+
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,8 +93,9 @@ export default function SigninPage() {
             className="w-full py-3 bg-gradient-to-r from-green-500 to-green-400 rounded-lg text-black font-semibold hover:from-green-600 hover:to-green-500 transition-all shadow-lg"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
+            disabled={loading}
           >
-            Sign In
+            {loading ? "Signing in..." : "Sign In"}
           </motion.button>
         </form>
 

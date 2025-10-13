@@ -10,17 +10,56 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-    const data = await res.json();
-    if (res.ok) router.push("/auth/signin");
-    else setError(data.error);
+    setLoading(true);
+
+    try {
+      // 1️⃣ Create user via signup API
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Signup failed");
+        setLoading(false);
+        return;
+      }
+
+      // 2️⃣ Automatically login via JWT login endpoint
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (!loginRes.ok) {
+        setError(loginData.error || "Login failed after signup");
+        setLoading(false);
+        return;
+      }
+
+      // 3️⃣ Store token in localStorage for future API requests
+      localStorage.setItem("token", loginData.token);
+      // optional: store user info too
+      localStorage.setItem("user", JSON.stringify(loginData.user));
+
+      // 4️⃣ Redirect to dashboard
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,11 +117,16 @@ export default function SignupPage() {
 
           <motion.button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-green-500 to-green-400 rounded-lg text-black font-semibold hover:from-green-600 hover:to-green-500 transition-all shadow-lg"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            disabled={loading}
+            className={`w-full py-3 rounded-lg font-semibold text-black shadow-lg transition-all ${
+              loading
+                ? "bg-green-300 cursor-not-allowed"
+                : "bg-gradient-to-r from-green-500 to-green-400 hover:from-green-600 hover:to-green-500"
+            }`}
+            whileHover={{ scale: loading ? 1 : 1.03 }}
+            whileTap={{ scale: loading ? 1 : 0.97 }}
           >
-            Sign Up
+            {loading ? "Creating Account..." : "Sign Up"}
           </motion.button>
         </form>
 
