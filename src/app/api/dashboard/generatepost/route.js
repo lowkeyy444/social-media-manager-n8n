@@ -31,14 +31,14 @@ export async function POST(req) {
       );
     }
 
-    // ✅ Select appropriate webhook
+    // ✅ Choose n8n webhook
     let webhookUrl = "";
     if (logoUrl && postCount == 1) {
       webhookUrl = N8N_WEBHOOKS.withLogoSingle;
     } else if (!logoUrl && postCount == 1) {
       webhookUrl = N8N_WEBHOOKS.withoutLogoSingle;
     } else {
-      webhookUrl = N8N_WEBHOOKS.customApi; // fallback or multi-post scenario
+      webhookUrl = N8N_WEBHOOKS.customApi; // fallback or multiple post generation
     }
 
     // ✅ Call n8n workflow
@@ -59,7 +59,7 @@ export async function POST(req) {
 
     const n8nData = await n8nRes.json();
 
-    // ✅ Validate and insert posts into DB
+    // ✅ Format and save posts with API key
     const formattedPosts = n8nData.map((p) => ({
       user: user.id,
       platform,
@@ -70,21 +70,24 @@ export async function POST(req) {
       imageFileName: p.imageFileName,
       imageUrl: p.image_url,
       htmlMessage: p.htmlMessage,
+      n8nApiKey: apiKey, // ✅ Save the key here
       createdAt: new Date(),
     }));
 
     await Post.insertMany(formattedPosts);
 
     return NextResponse.json({
-      message: "Post(s) generated successfully! Check Review Posts to approve.",
+      message: "✅ Post(s) generated successfully! Check Review Posts to approve.",
       postsSaved: formattedPosts.length,
     });
   } catch (err) {
     console.error("Generate Post API error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
-
 // // src/app/api/dashboard/generatepost/route.js
 // import { NextResponse } from "next/server";
 // import { connectDB } from "@/lib/db";
