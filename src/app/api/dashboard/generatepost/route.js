@@ -1,18 +1,15 @@
-// src/app/api/dashboard/generatepost/route.js
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
 import { N8N_WEBHOOKS } from "@/config/n8n";
+import { v4 as uuidv4 } from "uuid";
+import PostBatch from "@/models/PostBatch"; // new model for tracking batches
 
-/**
- * POST /api/dashboard/generatepost
- * Handles both single and multi-post generation requests to n8n
- */
 export async function POST(req) {
   try {
     await connectDB();
 
-    // 🔒 Validate auth header
+    // 🔒 Auth validation
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,27 +40,15 @@ export async function POST(req) {
 
     // 🌐 Select n8n workflow URL
     let webhookUrl = "";
-    if (postCount === 1 && logoUrl) {
-      webhookUrl = N8N_WEBHOOKS.withLogoSingle;
-    } else if (postCount === 1 && !logoUrl) {
-      webhookUrl = N8N_WEBHOOKS.withoutLogoSingle;
-    } else {
-      webhookUrl = N8N_WEBHOOKS.customApi; // multi-post async workflow
-    }
-
-    // 🧩 Common request payload
-    const payload = {
-      platform,
-      topic,
-      apiKey,
-      logoUrl,
-      postCount,
-      userId: user.id,
-    };
+    if (postCount === 1 && logoUrl) webhookUrl = N8N_WEBHOOKS.withLogoSingle;
+    else if (postCount === 1 && !logoUrl) webhookUrl = N8N_WEBHOOKS.withoutLogoSingle;
+    else webhookUrl = N8N_WEBHOOKS.customApi;
 
     // 🟢 Single post flow
     if (postCount === 1) {
+      const payload = { platform, topic, apiKey, logoUrl, postCount, userId: user.id };
       console.log("📤 Sending single-post request to:", webhookUrl);
+
       const n8nRes = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,8 +65,6 @@ export async function POST(req) {
       }
 
       const n8nData = await n8nRes.json();
-      console.log("✅ Single post data received:", n8nData);
-
       return NextResponse.json({
         message: "✅ Single post generated! Check Review Posts to approve.",
         posts: n8nData,
@@ -89,7 +72,20 @@ export async function POST(req) {
     }
 
     // 🟡 Multi-post flow
+    const batchId = uuidv4(); // unique id for this batch
+    await PostBatch.create({
+      userId: user.id,
+      platform,
+      topic,
+      postCountRequested: postCount,
+      postCountReceived: 0,
+      batchId,
+      createdAt: new Date(),
+    });
+
+    const payload = { platform, topic, apiKey, logoUrl, postCount, userId: user.id, batchId };
     console.log("📤 Triggering multi-post workflow:", webhookUrl);
+
     const n8nRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -105,12 +101,9 @@ export async function POST(req) {
       );
     }
 
-    console.log(
-      `✅ Multi-post workflow started for ${postCount} posts. Waiting for n8n to send each post to /post-webhook`
-    );
-
     return NextResponse.json({
       message: `✅ Multi-post workflow started for ${postCount} posts! Posts will be saved as they are generated.`,
+      batchId,
     });
   } catch (err) {
     console.error("🔥 GeneratePost API fatal error:", err);
