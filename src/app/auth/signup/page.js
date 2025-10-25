@@ -1,4 +1,4 @@
-
+// src/app/auth/signup/page.jsx
 "use client";
 
 import { useState } from "react";
@@ -25,7 +25,6 @@ export default function SignupPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      // ✅ Check if response is JSON
       const text = await res.text();
       let data;
       try {
@@ -43,7 +42,6 @@ export default function SignupPage() {
         return;
       }
 
-      // ✅ Save token + user info
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
@@ -57,87 +55,128 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f111a] px-4 font-orbitron">
-      <motion.div
-        className="bg-[rgba(15,17,26,0.85)] backdrop-blur-md rounded-3xl shadow-xl w-full max-w-md p-10 border border-green-600"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <h2 className="text-4xl font-bold text-green-400 mb-6 text-center tracking-wide">
-          Create an Account
-        </h2>
+    <div className="relative min-h-screen bg-gradient-to-br from-[#0B0B1F] via-[#1A1446] to-[#2A0C6C] text-white font-sans">
 
-        {error && (
-          <p className="text-red-500 text-center mb-4 font-medium">{error}</p>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-green-400 mb-2">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              required
-              className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-green-200 focus:ring-2 focus:ring-green-400 outline-none transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-green-400 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              required
-              className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-green-200 focus:ring-2 focus:ring-green-400 outline-none transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-green-400 mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
-              required
-              className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-green-200 focus:ring-2 focus:ring-green-400 outline-none transition-all"
-            />
-          </div>
-
-          <motion.button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3 rounded-lg font-semibold text-black shadow-lg transition-all ${
-              loading
-                ? "bg-green-300 cursor-not-allowed"
-                : "bg-gradient-to-r from-green-500 to-green-400 hover:from-green-600 hover:to-green-500"
-            }`}
-            whileHover={{ scale: loading ? 1 : 1.03 }}
-            whileTap={{ scale: loading ? 1 : 0.97 }}
+      {/* Navbar */}
+      <header className="fixed top-0 w-full z-50 border-b border-white/10 backdrop-blur-xl bg-white/5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400"
           >
-            {loading ? "Creating Account..." : "Sign Up"}
-          </motion.button>
-        </form>
+            SocialManager
+          </motion.h1>
 
-        <p className="text-green-200 mt-6 text-center">
-          Already have an account?{" "}
-          <a
-            href="/auth/signin"
-            className="text-green-400 font-medium hover:underline"
-          >
-            Sign In
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href="/auth/signin"
+              className="px-4 py-2 text-sm rounded-xl border border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-black font-semibold transition"
+            >
+              Sign In
+            </a>
+            <a
+              href="/auth/signup"
+              className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-black font-semibold hover:shadow-[0_0_25px_#00ffff90] transition"
+            >
+              Sign Up
+            </a>
+          </div>
+        </div>
+      </header>
+
+      {/* Signup Card */}
+      <div className="flex items-center justify-center min-h-screen px-4 pt-28">
+        <motion.div
+          className="w-full max-w-[420px] p-10 rounded-2xl bg-[rgba(255,255,255,0.03)] backdrop-blur-md border border-white/10 shadow-inner shadow-cyan-900/20 drop-shadow-lg"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h2 className="text-4xl font-bold text-cyan-400 mb-6 text-center tracking-wide">
+            Create an Account
+          </h2>
+
+          {error && (
+            <p className="text-red-500 text-center mb-4 font-medium">{error}</p>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-cyan-400 mb-2">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                required
+                className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-cyan-200 focus:ring-2 focus:ring-cyan-400 outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-cyan-400 mb-2">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john@example.com"
+                required
+                className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-cyan-200 focus:ring-2 focus:ring-cyan-400 outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-cyan-400 mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="********"
+                required
+                className="w-full p-3 rounded-lg bg-[#1a1c2b] text-white placeholder-cyan-200 focus:ring-2 focus:ring-cyan-400 outline-none transition-all"
+              />
+            </div>
+
+            <motion.button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-3 rounded-lg font-semibold text-black shadow-lg transition-all ${
+                loading
+                  ? "bg-cyan-300 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-400 to-blue-500 hover:shadow-[0_0_25px_#00ffff60] hover:scale-105"
+              }`}
+              whileHover={{ scale: loading ? 1 : 1.03 }}
+              whileTap={{ scale: loading ? 1 : 0.97 }}
+            >
+              {loading ? "Creating Account..." : "Sign Up"}
+            </motion.button>
+          </form>
+
+          <p className="text-cyan-200 mt-6 text-center">
+            Already have an account?{" "}
+            <a
+              href="/auth/signin"
+              className="text-cyan-400 font-medium hover:underline"
+            >
+              Sign In
+            </a>
+          </p>
+        </motion.div>
+      </div>
+
+      {/* Footer */}
+      <footer className="py-10 bg-white/5 border-t border-white/10 text-center relative">
+        <div className="h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent mb-6 animate-pulse" />
+        <p className="text-cyan-400 font-medium">© 2025 SocialManager. All rights reserved.</p>
+        <p className="text-sm text-gray-400 mt-2">
+          Built for the next generation of creators.
         </p>
-      </motion.div>
+      </footer>
     </div>
   );
 }
-
 // "use client";
 
 // import { useState } from "react";
