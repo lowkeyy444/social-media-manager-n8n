@@ -229,7 +229,6 @@
 //     </div>
 //   );
 // }
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -247,9 +246,6 @@ export default function GeneratePostPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [batchId, setBatchId] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [expanded, setExpanded] = useState({});
 
   // Redirect to signin if no token
   useEffect(() => {
@@ -257,52 +253,11 @@ export default function GeneratePostPage() {
     if (!token) router.push("/auth/signin");
   }, [router]);
 
-  // Poll backend for posts in real-time
-  useEffect(() => {
-    if (!batchId) return;
-    setPosts([]);
-    setMessage("");
-    setError("");
-
-    let interval;
-
-    const fetchPosts = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const res = await axios.get(`/api/dashboard/reviewposts?batchId=${batchId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        setPosts(res.data.posts || []);
-
-        if (res.data.completed) {
-          clearInterval(interval);
-          setLoading(false);
-          setMessage(`✅ ${res.data.posts.length} post(s) generated successfully!`);
-        }
-      } catch (err) {
-        console.error("Error fetching posts:", err);
-      }
-    };
-
-    interval = setInterval(fetchPosts, 2000);
-    fetchPosts();
-
-    return () => clearInterval(interval);
-  }, [batchId]);
-
-  const toggleExpand = (id) => {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setMessage("");
-    setBatchId(null);
 
     try {
       const token = localStorage.getItem("token");
@@ -312,26 +267,18 @@ export default function GeneratePostPage() {
         return;
       }
 
-      const res = await fetch("/api/dashboard/generatepost", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({ platform, topic, apiKey, logoUrl, postCount }),
-      });
+      const res = await axios.post(
+        "/api/dashboard/generatepost",
+        { platform, topic, apiKey, logoUrl, postCount },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const data = await res.json();
+      setMessage(res.data.message || "✅ Post generation triggered!");
+      setLoading(false);
 
-      if (res.ok) {
-        setBatchId(data.batchId); // Start polling with batchId
-      } else {
-        setError(data.error || "Something went wrong");
-        setLoading(false);
-      }
     } catch (err) {
       console.error(err);
-      setError("Error generating posts");
+      setError(err.response?.data?.error || "Error generating posts");
       setLoading(false);
     }
   };
@@ -432,29 +379,6 @@ export default function GeneratePostPage() {
       {error && (
         <div className="bg-[#1a1c2b] p-4 rounded-xl border border-red-600 text-red-500">
           {error}
-        </div>
-      )}
-
-      {/* Real-time posts */}
-      {posts.length > 0 && (
-        <div className="flex flex-col gap-4 mt-4">
-          {posts.map((post) => (
-            <div key={post._id} className="border p-4 rounded shadow">
-              <p>
-                {expanded[post._id] ? post.postText : post.postText.slice(0, 150) + '...'}
-                <button
-                  onClick={() => toggleExpand(post._id)}
-                  className="ml-2 text-blue-500 underline"
-                >
-                  {expanded[post._id] ? "Collapse" : "Read more"}
-                </button>
-              </p>
-              {post.imageUrl && (
-                <img src={post.imageUrl} alt="Post Image" className="mt-2 max-h-64 w-full object-cover rounded" />
-              )}
-              <p className="mt-1 text-gray-500">Status: {post.status}</p>
-            </div>
-          ))}
         </div>
       )}
     </div>
