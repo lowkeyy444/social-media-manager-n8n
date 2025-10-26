@@ -1,4 +1,3 @@
-// src/app/dashboard/layout.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,33 +16,20 @@ export default function DashboardLayout({ children }) {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     } else {
-      router.replace("/auth/signin"); // ✅ Use replace to prevent back button issues
+      router.replace("/auth/signin");
     }
     setLoading(false);
   }, [router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-green-400">
-        Loading...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-500">
-        Redirecting to Sign In...
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-cyan-400">Loading...</div>;
+  if (!user) return <div className="min-h-screen flex items-center justify-center text-red-500">Redirecting to Sign In...</div>;
 
   return (
-    <div className="min-h-screen flex bg-[#0f111a] font-orbitron text-white">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#0B0B1F] via-[#1A1446] to-[#2A0C6C] font-sans text-white">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header user={user} />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6 backdrop-blur-sm">{children}</main>
         <Footer />
       </div>
     </div>
