@@ -3,7 +3,8 @@ import { connectDB } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
 import { N8N_WEBHOOKS } from "@/config/n8n";
 import { v4 as uuidv4 } from "uuid";
-import PostBatch from "@/models/PostBatch"; // new model for tracking batches
+import PostBatch from "@/models/PostBatch";
+import User from "@/models/User"; // 🆕 import User model
 
 export async function POST(req) {
   try {
@@ -16,8 +17,8 @@ export async function POST(req) {
     }
 
     const token = authHeader.split(" ")[1];
-    const user = verifyToken(token);
-    if (!user || !user.id) {
+    const userData = verifyToken(token);
+    if (!userData || !userData.id) {
       return NextResponse.json({ error: "Invalid token" }, { status: 403 });
     }
 
@@ -31,22 +32,57 @@ export async function POST(req) {
     }
 
     console.log("🔹 GeneratePost request received:", {
-      userId: user.id,
+      userId: userData.id,
       platform,
       topic,
       postCount,
       hasLogo: !!logoUrl,
     });
 
-    // 🌐 Select n8n workflow URL
+    // 🧾 Fetch user from DB
+    const user = await User.findById(userData.id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // 🧠 Determine which API key to use
+    let platformApiKey = apiKey;
+    const existingKey = user.socialTokens?.[platform];
+
+    if (!existingKey && apiKey) {
+      // 🆕 Save new API key if not already stored
+      user.socialTokens[platform] = apiKey;
+      await user.save();
+      console.log(`💾 Saved new ${platform} API key for user ${user.email}`);
+    } else if (existingKey && !apiKey) {
+      // ✅ Reuse stored API key
+      platformApiKey = existingKey;
+      console.log(`🔁 Using saved ${platform} API key for user ${user.email}`);
+    } else if (!existingKey && !apiKey) {
+      // ❌ Neither provided nor stored
+      return NextResponse.json(
+        { error: `API key required for ${platform}` },
+        { status: 400 }
+      );
+    }
+
+    // 🌐 Select appropriate n8n webhook URL
     let webhookUrl = "";
     if (postCount === 1 && logoUrl) webhookUrl = N8N_WEBHOOKS.withLogoSingle;
     else if (postCount === 1 && !logoUrl) webhookUrl = N8N_WEBHOOKS.withoutLogoSingle;
     else webhookUrl = N8N_WEBHOOKS.customApi;
 
+    const payload = {
+      platform,
+      topic,
+      apiKey: platformApiKey,
+      logoUrl,
+      postCount,
+      userId: userData.id,
+    };
+
     // 🟢 Single post flow
     if (postCount === 1) {
-      const payload = { platform, topic, apiKey, logoUrl, postCount, userId: user.id };
       console.log("📤 Sending single-post request to:", webhookUrl);
 
       const n8nRes = await fetch(webhookUrl, {
@@ -72,9 +108,9 @@ export async function POST(req) {
     }
 
     // 🟡 Multi-post flow
-    const batchId = uuidv4(); // unique id for this batch
+    const batchId = uuidv4();
     await PostBatch.create({
-      userId: user.id,
+      userId: userData.id,
       platform,
       topic,
       postCountRequested: postCount,
@@ -83,13 +119,13 @@ export async function POST(req) {
       createdAt: new Date(),
     });
 
-    const payload = { platform, topic, apiKey, logoUrl, postCount, userId: user.id, batchId };
+    const multiPayload = { ...payload, batchId };
     console.log("📤 Triggering multi-post workflow:", webhookUrl);
 
     const n8nRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(multiPayload),
     });
 
     if (!n8nRes.ok) {
