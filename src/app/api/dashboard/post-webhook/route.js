@@ -118,7 +118,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // ✅ Save post to DB
+    //  Save post to DB
     const post = await Post.create({
       user: userId,
       platform: platform || "unknown",
@@ -136,7 +136,7 @@ export async function POST(req) {
 
     console.log("✅ Post saved to DB:", post._id);
 
-    // ✅ Update batch info if batchId exists
+    // Update batch info if batchId exists
     if (batchId) {
       const batch = await PostBatch.findOne({ batchId });
       if (batch) {

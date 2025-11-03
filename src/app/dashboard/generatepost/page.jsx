@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -10,6 +9,7 @@ export default function GeneratePostPage() {
   const [platform, setPlatform] = useState("");
   const [topic, setTopic] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [nodeId, setNodeId] = useState(""); 
   const [logoUrl, setLogoUrl] = useState("");
   const [postCount, setPostCount] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -37,13 +37,12 @@ export default function GeneratePostPage() {
 
       const res = await axios.post(
         "/api/dashboard/generatepost",
-        { platform, topic, apiKey, logoUrl, postCount },
+        { platform, topic, apiKey, nodeId, logoUrl, postCount }, // 👈 added nodeId
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setMessage(res.data.message || "✅ Post generation triggered!");
       setLoading(false);
-
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Error generating posts");
@@ -77,9 +76,29 @@ export default function GeneratePostPage() {
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
               <option value="linkedin">LinkedIn</option>
-              <option value="twitter">Twitter</option>
             </select>
           </div>
+
+       {/* Node ID (for Instagram or Facebook) */}
+{(platform === "instagram" || platform === "facebook") && (
+  <div className="flex flex-col">
+    <label className="text-white font-medium mb-2">
+      {platform === "instagram" ? "Instagram Node ID" : "Facebook Node ID"}
+    </label>
+    <input
+      type="text"
+      value={nodeId}
+      onChange={(e) => setNodeId(e.target.value)}
+      placeholder={
+        platform === "instagram"
+          ? "Enter Instagram Node ID"
+          : "Enter Facebook Node ID"
+      }
+      className="p-4 rounded-xl bg-[#1a1c2b] text-white focus:ring-2 focus:ring-cyan-400 outline-none transition"
+      required
+    />
+  </div>
+)}
 
           {/* Topic */}
           <div className="flex flex-col">
@@ -96,8 +115,6 @@ export default function GeneratePostPage() {
               <option value="legal">Legal</option>
               <option value="tax">Tax</option>
               <option value="finance">Finance</option>
-              <option value="custom">Custom</option>
-              <option value="rss">RSS Feed</option>
             </select>
           </div>
 
@@ -165,7 +182,6 @@ export default function GeneratePostPage() {
     </div>
   );
 }
-
 // "use client";
 
 // import { useState, useEffect } from "react";
