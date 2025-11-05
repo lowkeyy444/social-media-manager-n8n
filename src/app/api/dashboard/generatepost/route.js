@@ -10,7 +10,6 @@ export async function POST(req) {
   try {
     await connectDB();
 
-    //  Authenticate request
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,8 +21,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid token" }, { status: 403 });
     }
 
-    //  Parse request body
-    const { platform, topic, apiKey, nodeId, logoUrl, postCount, imageUrl } = await req.json();
+    const { platform, topic, logoUrl, postCount, imageUrl } = await req.json();
     if (!platform || !topic) {
       return NextResponse.json({ error: "Platform and topic are required" }, { status: 400 });
     }
@@ -31,49 +29,19 @@ export async function POST(req) {
     const user = await User.findById(userData.id);
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    //  Ensure socialTokens structure exists safely
-    if (!user.socialTokens) user.socialTokens = {};
+    // ✅ Get stored credentials from Manage Social Accounts (if needed later)
+    // We’re not saving or modifying them here anymore.
 
-    //  Compatibility patch for legacy tokens
-    if (typeof user.socialTokens[platform] === "string") {
-      user.socialTokens[platform] = { token: user.socialTokens[platform], nodeId: "" };
-      await user.save();
-    } else if (!user.socialTokens[platform]) {
-      user.socialTokens[platform] = { token: "", nodeId: "" };
-      await user.save();
-    }
-
-    //  Save or reuse platform API key
-    let platformApiKey = apiKey;
-    if (apiKey && !user.socialTokens[platform].token) {
-      user.socialTokens[platform].token = apiKey;
-      await user.save();
-    } else if (!apiKey && user.socialTokens[platform].token) {
-      platformApiKey = user.socialTokens[platform].token;
-    } else if (!apiKey && !user.socialTokens[platform].token) {
-      return NextResponse.json({ error: `API key required for ${platform}` }, { status: 400 });
-    }
-
-    //  Instagram Flow
+    // ---------- Instagram ----------
     if (platform === "instagram") {
-      console.log("📸 Instagram flow initiated");
-
-      if (nodeId && nodeId !== user.socialTokens.instagram?.nodeId) {
-        user.socialTokens.instagram.nodeId = nodeId;
-        await user.save();
-        console.log(`💾 Saved Instagram Node ID for ${user.email}: ${nodeId}`);
-      }
-
       const batchId = uuidv4();
       const payload = {
-        InstagramApiKey: platformApiKey,
-        nodeId: nodeId || user.socialTokens.instagram?.nodeId,
-        imageUrl: imageUrl || "",
         platform,
         topic,
         postCount,
         batchId,
         userId: userData.id,
+        imageUrl: imageUrl || "",
       };
 
       const webhookUrl = N8N_WEBHOOKS.instagram;
@@ -110,34 +78,22 @@ export async function POST(req) {
       });
     }
 
-    //  Facebook Flow
+    // ---------- Facebook ----------
     if (platform === "facebook") {
-      console.log("📘 Facebook flow initiated");
-
-      // Save Facebook Node ID
-      if (nodeId && nodeId !== user.socialTokens.facebook?.nodeId) {
-        user.socialTokens.facebook.nodeId = nodeId;
-        await user.save();
-        console.log(`💾 Saved Facebook Node ID for ${user.email}: ${nodeId}`);
-      }
-
       const batchId = uuidv4();
       const payload = {
-        facebookApiKey: platformApiKey,
-        nodeId: nodeId || user.socialTokens.facebook?.nodeId,
-        imageUrl: imageUrl || "",
         platform,
         topic,
         postCount,
         batchId,
         userId: userData.id,
+        imageUrl: imageUrl || "",
       };
 
       const webhookUrl = logoUrl
         ? N8N_WEBHOOKS.facebookWithUrl
         : N8N_WEBHOOKS.facebook;
 
-      // 🧾 Track multi-post batches
       if (postCount > 1) {
         await PostBatch.create({
           userId: userData.id,
@@ -170,20 +126,13 @@ export async function POST(req) {
       });
     }
 
-    //  Default (LinkedIn and others)
+    // ---------- Default (LinkedIn and others) ----------
     let webhookUrl = "";
     if (postCount === 1 && logoUrl) webhookUrl = N8N_WEBHOOKS.withLogoSingle;
     else if (postCount === 1 && !logoUrl) webhookUrl = N8N_WEBHOOKS.withoutLogoSingle;
     else webhookUrl = N8N_WEBHOOKS.customApi;
 
-    const payload = {
-      platform,
-      topic,
-      apiKey: platformApiKey,
-      logoUrl,
-      postCount,
-      userId: userData.id,
-    };
+    const payload = { platform, topic, logoUrl, postCount, userId: userData.id };
 
     if (postCount === 1) {
       const n8nRes = await fetch(webhookUrl, {
@@ -205,7 +154,6 @@ export async function POST(req) {
       });
     }
 
-    // 🔁 Multi-post flow
     const batchId = uuidv4();
     await PostBatch.create({
       userId: userData.id,

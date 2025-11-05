@@ -1,6 +1,7 @@
 "use client";
 
 import { FaRegEdit, FaRegListAlt, FaHistory, FaTrashAlt, FaHome } from "react-icons/fa";
+import { MdSupervisorAccount } from "react-icons/md";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +14,7 @@ export default function Sidebar() {
     { name: "Review Posts", icon: <FaRegListAlt />, href: "/dashboard/reviewposts" },
     { name: "Post History", icon: <FaHistory />, href: "/dashboard/posthistory" },
     { name: "Rejected Posts", icon: <FaTrashAlt />, href: "/dashboard/rejectedposts" },
+    { name: "Manage Accounts", icon: <MdSupervisorAccount />, href: "/dashboard/manageaccounts" },
   ];
 
   return (

@@ -8,18 +8,45 @@ export default function GeneratePostPage() {
   const router = useRouter();
   const [platform, setPlatform] = useState("");
   const [topic, setTopic] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [nodeId, setNodeId] = useState(""); 
   const [logoUrl, setLogoUrl] = useState("");
+  const [customLogo, setCustomLogo] = useState("");
   const [postCount, setPostCount] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [filteredLogos, setFilteredLogos] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) router.push("/auth/signin");
+    else fetchAccounts(token);
   }, [router]);
+
+  // ✅ Fetch all social accounts to populate logo dropdown
+  const fetchAccounts = async (token) => {
+    try {
+      const res = await axios.get("/api/dashboard/accounts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAccounts(res.data);
+    } catch (err) {
+      console.error("Error fetching accounts:", err);
+    }
+  };
+
+  // ✅ Filter logos by selected platform
+  useEffect(() => {
+    if (!platform) return setFilteredLogos([]);
+    const uniqueLogos = [
+      ...new Set(
+        accounts
+          .filter((a) => a.platform === platform && a.logoUrl)
+          .map((a) => a.logoUrl)
+      ),
+    ];
+    setFilteredLogos(uniqueLogos);
+  }, [platform, accounts]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,17 +62,21 @@ export default function GeneratePostPage() {
         return;
       }
 
+      const finalLogo = customLogo || logoUrl || "";
+
       const res = await axios.post(
         "/api/dashboard/generatepost",
-        { platform, topic, apiKey, nodeId, logoUrl, postCount }, // 👈 added nodeId
+        { platform, topic, logoUrl: finalLogo, postCount },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setMessage(res.data.message || "✅ Post generation triggered!");
-      setLoading(false);
+      setCustomLogo("");
+      setLogoUrl("");
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Error generating posts");
+    } finally {
       setLoading(false);
     }
   };
@@ -76,29 +107,9 @@ export default function GeneratePostPage() {
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
               <option value="linkedin">LinkedIn</option>
+              <option value="twitter">Twitter</option>
             </select>
           </div>
-
-       {/* Node ID (for Instagram or Facebook) */}
-{(platform === "instagram" || platform === "facebook") && (
-  <div className="flex flex-col">
-    <label className="text-white font-medium mb-2">
-      {platform === "instagram" ? "Instagram Node ID" : "Facebook Node ID"}
-    </label>
-    <input
-      type="text"
-      value={nodeId}
-      onChange={(e) => setNodeId(e.target.value)}
-      placeholder={
-        platform === "instagram"
-          ? "Enter Instagram Node ID"
-          : "Enter Facebook Node ID"
-      }
-      className="p-4 rounded-xl bg-[#1a1c2b] text-white focus:ring-2 focus:ring-cyan-400 outline-none transition"
-      required
-    />
-  </div>
-)}
 
           {/* Topic */}
           <div className="flex flex-col">
@@ -118,27 +129,53 @@ export default function GeneratePostPage() {
             </select>
           </div>
 
-          {/* API Key */}
+          {/* ✅ Logo selection and manual entry */}
           <div className="flex flex-col">
-            <label className="text-white font-medium mb-2">API Key</label>
-            <input
-              type="text"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your API Key"
-              className="p-4 rounded-xl bg-[#1a1c2b] text-white focus:ring-2 focus:ring-cyan-400 outline-none transition"
-            />
-          </div>
+            <label className="text-white font-medium mb-2">
+              Select or Enter Logo URL
+            </label>
+            <div className="flex items-center space-x-3">
+              <select
+                value={logoUrl}
+                onChange={(e) => {
+                  setLogoUrl(e.target.value);
+                  setCustomLogo("");
+                }}
+                className="flex-1 p-4 rounded-xl bg-[#1a1c2b] text-white focus:ring-2 focus:ring-cyan-400 outline-none transition truncate"
+              >
+                <option value="">Select from added logos</option>
+                {filteredLogos.map((url) => {
+                  const short =
+                    url.length > 45
+                      ? `${url.slice(0, 25)}...${url.slice(-10)}`
+                      : url;
+                  return (
+                    <option key={url} value={url}>
+                      {short}
+                    </option>
+                  );
+                })}
+              </select>
 
-          {/* Logo URL */}
-          <div className="flex flex-col">
-            <label className="text-white font-medium mb-2">Logo URL</label>
+              {(logoUrl || customLogo) && (
+                <img
+                  src={customLogo || logoUrl}
+                  alt="Preview"
+                  className="w-10 h-10 rounded-lg border border-cyan-400/10"
+                />
+              )}
+            </div>
+
+            {/* Manual input */}
             <input
               type="text"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="Logo URL"
-              className="p-4 rounded-xl bg-[#1a1c2b] text-white focus:ring-2 focus:ring-cyan-400 outline-none transition"
+              placeholder="Or paste a custom logo URL"
+              value={customLogo}
+              onChange={(e) => {
+                setCustomLogo(e.target.value);
+                setLogoUrl("");
+              }}
+              className="mt-3 p-4 rounded-xl bg-[#1a1c2b] text-white focus:ring-2 focus:ring-cyan-400 outline-none transition"
             />
           </div>
 
