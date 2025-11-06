@@ -5,7 +5,10 @@ export const N8N_WEBHOOKS = {
   withoutLogoSingle:
     "https://lately-boss-gator.ngrok-free.app/webhook-test/linkdin-post-start",
   customApi:
-    "https://lately-boss-gator.ngrok-free.app/webhook/linkdin-post-start-multiplepost-loopfn", // multipostWithoutLogo
+    "https://lately-boss-gator.ngrok-free.app/webhook-test/linkdin-post-start-multiplepost-loopfn", // multipostWithoutLogo
+  linkedinMultipostWithLogo:
+    "https://lately-boss-gator.ngrok-free.app/webhook-test/linkdin-post-start-multiplepost-loopfn-withlogo",
+
   instagram:
     "https://lately-boss-gator.ngrok-free.app/webhook-test/instagram-post-start-withoutlogo",
 

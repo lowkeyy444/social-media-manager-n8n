@@ -107,7 +107,6 @@ export default function GeneratePostPage() {
               <option value="facebook">Facebook</option>
               <option value="instagram">Instagram</option>
               <option value="linkedin">LinkedIn</option>
-              <option value="twitter">Twitter</option>
             </select>
           </div>
 

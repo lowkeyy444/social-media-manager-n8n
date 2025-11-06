@@ -119,7 +119,6 @@ export default function ManageAccounts() {
               <option value="linkedin">LinkedIn</option>
               <option value="instagram">Instagram</option>
               <option value="facebook">Facebook</option>
-              <option value="twitter">Twitter</option>
             </select>
 
             {/* Account Name */}
