@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Post from "@/models/postModel";
 import User from "@/models/User";
+import SocialAccount from "@/models/SocialAccount";
 import { verifyToken } from "@/lib/jwt";
 import axios from "axios";
 
-// Fetch posts for logged-in user
+// 🟩 GET — Fetch only pending posts for review
 export async function GET(req) {
   try {
     await connectDB();
@@ -17,13 +18,11 @@ export async function GET(req) {
 
     const token = authHeader.split(" ")[1];
     const user = await verifyToken(token);
-
     if (!user?.id) {
-      console.error("❌ Invalid user in token:", user);
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const posts = await Post.find({ user: user.id }).sort({ createdAt: -1 });
+    const posts = await Post.find({ user: user.id, status: "pending" }).sort({ createdAt: -1 });
     return NextResponse.json(posts, { status: 200 });
   } catch (error) {
     console.error("❌ Error fetching posts:", error);
@@ -31,7 +30,7 @@ export async function GET(req) {
   }
 }
 
-// Handle approving/rejecting post
+// 🟦 PATCH — Approve / Reject post (no posting happens here)
 export async function PATCH(req) {
   try {
     await connectDB();
@@ -43,112 +42,97 @@ export async function PATCH(req) {
 
     const token = req.headers.get("authorization")?.split(" ")[1];
     const userData = await verifyToken(token);
-    const user = await User.findById(userData.id);
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
 
     const post = await Post.findById(postId);
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
-    }
+    if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
-    // Only post to social media when approved
-    if (status === "approved") {
-      const platform = post.platform?.toLowerCase();
+    await Post.findByIdAndUpdate(postId, { status }, { new: true });
+    console.log(`✅ Post ${postId} marked as ${status}`);
 
-      try {
-        // LinkedIn Flow
-        if (platform === "linkedin") {
-          const linkedinApiKey = user.socialTokens?.linkedin?.token;
-          if (!linkedinApiKey) {
-            return NextResponse.json({ error: "Missing LinkedIn token" }, { status: 400 });
-          }
-
-          console.log("📤 Sending approved post to LinkedIn workflow...");
-          await axios.post(
-            "https://lately-boss-gator.ngrok-free.app/webhook/linkdin-post-go",
-            {
-              linkedinApiKey,
-              postText: post.postText,
-              imageFileName: post.imageFileName,
-            }
-          );
-        }
-
-        //  Instagram Flow
-        if (platform === "instagram") {
-          const instagramToken = user.socialTokens?.instagram?.token;
-          const instagramNodeId = user.socialTokens?.instagram?.nodeId;
-
-          if (!instagramToken) {
-            return NextResponse.json({ error: "Missing Instagram API token" }, { status: 400 });
-          }
-          if (!instagramNodeId) {
-            return NextResponse.json({ error: "Missing Instagram Node ID" }, { status: 400 });
-          }
-
-          console.log("📸 Sending approved post to Instagram workflow...");
-          await axios.post(
-            "https://lately-boss-gator.ngrok-free.app/webhook-test/instagram-posting",
-            {
-              instagramApiKey: instagramToken,
-              nodeId: instagramNodeId,
-              postText: post.postText,
-              imageFileName: post.imageFileName,
-            }
-          );
-        }
-
-        // Facebook Flow
-        if (platform === "facebook") {
-          const facebookApiKey = user.socialTokens?.facebook?.token;
-          const facebookNodeId = user.socialTokens?.facebook?.nodeId;
-
-          if (!facebookApiKey) {
-            return NextResponse.json({ error: "Missing Facebook API token" }, { status: 400 });
-          }
-          if (!facebookNodeId) {
-            return NextResponse.json({ error: "Missing Facebook Node ID" }, { status: 400 });
-          }
-
-          console.log("📘 Sending approved post to Facebook workflow...");
-          await axios.post(
-            "https://lately-boss-gator.ngrok-free.app/webhook-test/facebook-posting",
-            {
-              facebookApiKey,
-              nodeId: facebookNodeId,
-              postText: post.postText,
-              imageFileName: post.imageFileName,
-              platform: "facebook",
-              topic: post.topic,
-              postCount: 1,
-              batchId: post.batchId || "manual",
-              userId: user._id.toString(),
-            }
-          );
-        }
-
-      } catch (err) {
-        console.error(`❌ Error posting to ${post.platform}:`, err.message);
-        return NextResponse.json({ error: `Failed to post to ${post.platform}` }, { status: 500 });
-      }
-    }
-
-    // Update post status in DB
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      { status },
-      { new: true }
-    );
-
-    return NextResponse.json(updatedPost, { status: 200 });
+    return NextResponse.json({ message: `Post ${status}` }, { status: 200 });
   } catch (error) {
     console.error("🔥 Error updating post:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update post" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// 🟥 POST — "Post Now" to send immediately to n8n workflow
+export async function POST(req) {
+  try {
+    await connectDB();
+    const { postId } = await req.json();
+
+    if (!postId) {
+      return NextResponse.json({ error: "Missing postId" }, { status: 400 });
+    }
+
+    const token = req.headers.get("authorization")?.split(" ")[1];
+    const userData = await verifyToken(token);
+    const user = await User.findById(userData.id);
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    const post = await Post.findById(postId);
+    if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+
+    const platform = post.platform?.toLowerCase();
+    if (!platform) return NextResponse.json({ error: "Missing platform" }, { status: 400 });
+
+    // 🔍 Find connected account
+    const socialAccount = await SocialAccount.findOne({ userId: user._id, platform });
+    if (!socialAccount) {
+      return NextResponse.json({ error: `No connected ${platform} account found` }, { status: 400 });
+    }
+
+    const { apiKey, nodeId } = socialAccount;
+
+    // ✅ Same posting logic as before
+    try {
+      if (platform === "linkedin") {
+        console.log("📤 Posting to LinkedIn workflow...");
+        await axios.post("https://lately-boss-gator.ngrok-free.app/webhook/linkdin-post-go", {
+          linkedinApiKey: apiKey,
+          postText: post.postText,
+          imageFileName: post.imageFileName,
+        });
+        await Post.findByIdAndUpdate(post._id, { status: "posted" });
+      }
+
+      if (platform === "instagram") {
+        console.log("📸 Posting to Instagram workflow...");
+        await axios.post("https://lately-boss-gator.ngrok-free.app/webhook-test/instagram-posting", {
+          instagramApiKey: apiKey,
+          nodeId,
+          postText: post.postText,
+          imageFileName: post.imageFileName,
+        });
+        await Post.findByIdAndUpdate(post._id, { status: "posted" });
+      }
+
+      if (platform === "facebook") {
+        console.log("📘 Posting to Facebook workflow...");
+        await axios.post("https://lately-boss-gator.ngrok-free.app/webhook-test/facebook-posting", {
+          facebookApiKey: apiKey,
+          nodeId,
+          postText: post.postText,
+          imageFileName: post.imageFileName,
+          platform: "facebook",
+          topic: post.topic,
+          postCount: 1,
+          batchId: post.batchId || "manual",
+          userId: user._id.toString(),
+        });
+        await Post.findByIdAndUpdate(post._id, { status: "posted" });
+      }
+
+      // 🟢 Mark as posted
+      await Post.findByIdAndUpdate(postId, { status: "posted" });
+      return NextResponse.json({ message: `✅ Posted to ${platform}!` }, { status: 200 });
+    } catch (err) {
+      console.error(`❌ Error posting to ${platform}:`, err.message);
+      return NextResponse.json({ error: `Failed to post to ${platform}` }, { status: 500 });
+    }
+  } catch (error) {
+    console.error("🔥 Error in POST NOW:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

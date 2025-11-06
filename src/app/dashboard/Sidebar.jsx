@@ -12,6 +12,7 @@ export default function Sidebar() {
     { name: "Dashboard Home", icon: <FaHome />, href: "/dashboard" },
     { name: "Generate Post", icon: <FaRegEdit />, href: "/dashboard/generatepost" },
     { name: "Review Posts", icon: <FaRegListAlt />, href: "/dashboard/reviewposts" },
+    { name: "Schedule Posts", icon: <FaRegListAlt />, href: "/dashboard/schedulepost" },
     { name: "Post History", icon: <FaHistory />, href: "/dashboard/posthistory" },
     { name: "Rejected Posts", icon: <FaTrashAlt />, href: "/dashboard/rejectedposts" },
     { name: "Manage Accounts", icon: <MdSupervisorAccount />, href: "/dashboard/manageaccounts" },

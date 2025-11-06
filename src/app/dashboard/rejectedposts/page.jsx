@@ -17,9 +17,10 @@ export default function RejectedPosts() {
     const fetchPosts = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("/api/dashboard/reviewpost", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get("/api/dashboard/rejectedposts", {
+  headers: { Authorization: `Bearer ${token}` },
+});
+setPosts(res.data || []);
         setPosts((res.data || []).filter((p) => p.status === "rejected"));
       } catch (err) {
         console.error("Error fetching posts:", err);

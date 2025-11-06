@@ -8,19 +8,13 @@ const UserSchema = new mongoose.Schema(
     role: { type: String, default: "user" },
     credits: { type: Number, default: 0 },
 
-    socialTokens: {
-      instagram: {
-        token: { type: String, default: "" },
-        nodeId: { type: String, default: "" },
+    // Optionally: reference connected accounts
+    connectedAccounts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SocialAccount",
       },
-      linkedin: {
-        token: { type: String, default: "" },
-      },
-      facebook: {
-        token: { type: String, default: "" },  // 👈 Facebook access token
-        nodeId: { type: String, default: "" }, // 👈 Facebook Node ID
-      },
-    },
+    ],
   },
   { timestamps: true }
 );
