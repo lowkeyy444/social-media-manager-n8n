@@ -13,6 +13,9 @@ export default function ReviewPosts() {
   const [active, setActive] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState("");
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [selectedPost, setSelectedPost] = useState(null);
   const router = useRouter();
 
   // 🔹 Fetch posts
@@ -73,18 +76,37 @@ export default function ReviewPosts() {
     }
   };
 
-  // 🟢 Post Now
-  const handlePostNow = async (id) => {
+  // 🟢 Step 1: Fetch available accounts when "Post Now" is clicked
+  const handlePostNowClick = async (post) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `/api/dashboard/accounts?platform=${post.platform}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAccounts(res.data || []);
+      setSelectedPost(post);
+      setShowAccountModal(true);
+    } catch (err) {
+      console.error("Error fetching accounts:", err);
+      setMessage("Failed to load accounts.");
+      setTimeout(() => setMessage(""), 2500);
+    }
+  };
+
+  // 🟢 Step 2: Post using selected account
+  const handlePostNow = async (socialAccountId) => {
     setIsProcessing(true);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
         "/api/dashboard/reviewpost",
-        { postId: id },
+        { postId: selectedPost._id, socialAccountId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessage(res.data?.message || "Posted successfully!");
       setActive(null);
+      setShowAccountModal(false);
     } catch (err) {
       console.error("Error posting now:", err);
       setMessage(err.response?.data?.error || "Failed to post now.");
@@ -316,7 +338,7 @@ export default function ReviewPosts() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handlePostNow(active._id);
+                        handlePostNowClick(active);
                       }}
                       disabled={isProcessing}
                       className="px-4 py-2 rounded-lg bg-gradient-to-r from-green-400 to-emerald-500 text-black font-semibold shadow hover:shadow-[0_0_25px_#00cfff50]"
@@ -359,6 +381,60 @@ export default function ReviewPosts() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 🌐 Account Selection Modal */}
+      <AnimatePresence>
+        {showAccountModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAccountModal(false)}
+            />
+            <motion.div
+              className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[rgba(15,17,26,0.95)] border border-cyan-400/10 rounded-2xl shadow-2xl w-[90%] max-w-md p-6 text-white"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <h2 className="text-lg font-bold text-center mb-4">
+                Select an Account to Post
+              </h2>
+              {accounts.length === 0 ? (
+                <p className="text-center text-gray-400">
+                  No connected accounts found for this platform.
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                  {accounts.map((acc) => (
+                    <button
+                      key={acc._id}
+                      onClick={() => handlePostNow(acc._id)}
+                      className="w-full py-2 px-4 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.08)] transition font-medium flex justify-between items-center"
+                      disabled={isProcessing}
+                    >
+                      <span>{acc.accountName}</span>
+                      <span className="text-xs text-gray-400">
+                        {acc.platform?.toUpperCase()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="text-center mt-5">
+                <button
+                  onClick={() => setShowAccountModal(false)}
+                  className="mt-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.08)] transition"
+                >
+                  Cancel
+                </button>
               </div>
             </motion.div>
           </>

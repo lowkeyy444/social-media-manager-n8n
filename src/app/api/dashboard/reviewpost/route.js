@@ -89,7 +89,7 @@ export async function POST(req) {
     try {
       if (platform === "linkedin") {
         console.log("📤 Posting to LinkedIn workflow...");
-        await axios.post("https://lately-boss-gator.ngrok-free.app/webhook/linkdin-post-go", {
+        await axios.post("https://lately-boss-gator.ngrok-free.app/webhook-test/linkdin-post-go", {
           linkedinApiKey: apiKey,
           postText: post.postText,
           imageFileName: post.imageFileName,

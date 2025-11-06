@@ -21,17 +21,30 @@ export default function DashboardLayout({ children }) {
     setLoading(false);
   }, [router]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-cyan-400">Loading...</div>;
-  if (!user) return <div className="min-h-screen flex items-center justify-center text-red-500">Redirecting to Sign In...</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-cyan-400">
+        Loading...
+      </div>
+    );
+  if (!user)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500">
+        Redirecting to Sign In...
+      </div>
+    );
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-[#0B0B1F] via-[#1A1446] to-[#2A0C6C] font-sans text-white">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#0B0B1F] via-[#1A1446] to-[#2A0C6C] font-sans text-white relative">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header user={user} />
         <main className="flex-1 p-6 backdrop-blur-sm">{children}</main>
         <Footer />
       </div>
+
+      {/* 🧩 Global modal portal target (for modals like Validate Logo) */}
+      <div id="modal-root" className="absolute inset-0 pointer-events-none z-[100]" />
     </div>
   );
 }

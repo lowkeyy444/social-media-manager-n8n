@@ -6,7 +6,7 @@ import axios from "axios";
 import { HiOutlineDuplicate } from "react-icons/hi";
 import { FaRegCalendarAlt } from "react-icons/fa";
 
-// Optional util to format Google Drive image URLs
+// ✅ Format Google Drive image URLs
 const getDriveImageUrl = (url) => {
   if (!url) return "";
   const match = url.match(/[-\w]{25,}/);
@@ -22,6 +22,10 @@ export default function SchedulePostsPage() {
   const [startDate, setStartDate] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 🟩 New: account selection modal state
+  const [accounts, setAccounts] = useState([]);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   // ✅ Fetch approved posts
   useEffect(() => {
@@ -47,12 +51,29 @@ export default function SchedulePostsPage() {
     setTimeout(() => setMessage(""), 2000);
   };
 
-  // ✅ Schedule posts handler
-  const handleSchedule = async (e) => {
+  // 🟢 Step 1: open modal to choose account before scheduling
+  const handleScheduleClick = async (e) => {
     e.preventDefault();
     if (!platform || selectedPosts.length === 0)
       return setMessage("Please select platform and posts to schedule.");
 
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `/api/dashboard/accounts?platform=${platform}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAccounts(res.data || []);
+      setShowAccountModal(true);
+    } catch (err) {
+      console.error("❌ Error fetching accounts:", err);
+      setMessage("Failed to load accounts.");
+      setTimeout(() => setMessage(""), 2500);
+    }
+  };
+
+  // 🟢 Step 2: actually schedule using chosen account
+  const handleAccountSelect = async (socialAccountId) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -64,12 +85,13 @@ export default function SchedulePostsPage() {
           postsPerSchedule,
           frequency,
           startDate: startDate || new Date().toISOString(),
+          socialAccountId,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setMessage(res.data.message || "✅ Schedule created successfully!");
       setSelectedPosts([]);
+      setShowAccountModal(false);
     } catch (err) {
       console.error("❌ Scheduling failed:", err);
       setMessage(err.response?.data?.error || "Failed to create schedule");
@@ -181,7 +203,7 @@ export default function SchedulePostsPage() {
         {/* ✅ Schedule Settings Form */}
         {approvedPosts.length > 0 && (
           <motion.form
-            onSubmit={handleSchedule}
+            onSubmit={handleScheduleClick}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -270,6 +292,60 @@ export default function SchedulePostsPage() {
           </motion.form>
         )}
       </main>
+
+      {/* 🌐 Account Selection Modal */}
+      <AnimatePresence>
+        {showAccountModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAccountModal(false)}
+            />
+            <motion.div
+              className="fixed z-[80] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[rgba(15,17,26,0.95)] border border-cyan-400/10 rounded-2xl shadow-2xl w-[90%] max-w-md p-6 text-white"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <h2 className="text-lg font-bold text-center mb-4">
+                Select an Account to Schedule Posts
+              </h2>
+              {accounts.length === 0 ? (
+                <p className="text-center text-gray-400">
+                  No connected accounts found for this platform.
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                  {accounts.map((acc) => (
+                    <button
+                      key={acc._id}
+                      onClick={() => handleAccountSelect(acc._id)}
+                      className="w-full py-2 px-4 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.08)] transition font-medium flex justify-between items-center"
+                      disabled={loading}
+                    >
+                      <span>{acc.accountName}</span>
+                      <span className="text-xs text-gray-400">
+                        {acc.platform?.toUpperCase()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="text-center mt-5">
+                <button
+                  onClick={() => setShowAccountModal(false)}
+                  className="mt-2 px-4 py-2 rounded-lg bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.08)] transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Floating Message */}
       <AnimatePresence>
